@@ -1,257 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Problem Tracking Sheet</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
-        }
-        .sheet-container {
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .table-header {
-            background-color: #4f46e5;
-            color: white;
-            font-weight: 600;
-        }
-        .table-row:nth-child(even) {
-            background-color: #f8fafc;
-        }
-        .table-row:nth-child(odd) {
-            background-color: #ffffff;
-        }
-        .table-cell {
-            border: 1px solid #e2e8f0;
-        }
-        input, select, textarea {
-            border: none;
-            width: 100%;
-            height: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            background: transparent;
-        }
-        input:focus, select:focus, textarea:focus {
-            outline: 2px solid #4f46e5;
-        }
-        .dashboard {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Problem Tracker Dashboard</title>
+  <script defer src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
-<body>
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">Problem Tracking Sheet</h1>
-    <div class="dashboard p-6 mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="text-center">
-            <h3 class="text-lg font-semibold text-gray-600">Total Problems</h3>
-            <p id="total-problems" class="text-4xl font-bold text-indigo-600">0</p>
-        </div>
-        <div class="text-center">
-            <h3 class="text-lg font-semibold text-gray-600">Completed</h3>
-            <p id="completed-count" class="text-4xl font-bold text-green-600">0</p>
-        </div>
-        <div class="text-center">
-            <h3 class="text-lg font-semibold text-gray-600">Pending/Open</h3>
-            <p id="pending-count" class="text-4xl font-bold text-amber-600">0</p>
-        </div>
+<body class="bg-gray-100 text-gray-900">
+
+  <div class="max-w-6xl mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-6 text-center">Problem Tracker Dashboard</h1>
+
+    <!-- Add Row Button -->
+    <div class="flex justify-end mb-4">
+      <button id="add-row" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add Row</button>
+      <button id="export-excel" class="ml-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Export to Excel</button>
     </div>
-    <div class="dashboard p-6 mb-8">
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">Status Distribution</h2>
-        <div class="h-64">
-            <canvas id="statusChart"></canvas>
-        </div>
+
+    <!-- Table -->
+    <div class="overflow-x-auto mb-10">
+      <table class="min-w-full bg-white border rounded-lg shadow">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="py-2 px-4 border">Name</th>
+            <th class="py-2 px-4 border">Problem</th>
+            <th class="py-2 px-4 border">Status</th>
+            <th class="py-2 px-4 border">Action</th>
+          </tr>
+        </thead>
+        <tbody id="sheet-body"></tbody>
+      </table>
     </div>
-    <div class="sheet-container bg-white mb-8">
-        <div class="overflow-x-auto">
-            <table class="w-full table-auto">
-                <thead>
-                    <tr class="table-header">
-                        <th class="table-cell px-4 py-3 text-left">Sr. No</th>
-                        <th class="table-cell px-4 py-3 text-left">Date</th>
-                        <th class="table-cell px-4 py-3 text-left">Problem</th>
-                        <th class="table-cell px-4 py-3 text-left">Solution</th>
-                        <th class="table-cell px-4 py-3 text-left">Status</th>
-                        <th class="table-cell px-4 py-3 text-left">Remarks</th>
-                        <th class="table-cell px-4 py-3 text-left">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="sheet-body"></tbody>
-            </table>
-        </div>
-        <div class="p-4 bg-gray-50 border-t border-gray-200">
-            <button id="add-row" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded">
-                Add New Row
-            </button>
-            <button id="download-excel" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded ml-4">
-                Download Excel
-            </button>
-        </div>
+
+    <!-- Chart -->
+    <div class="bg-white p-4 rounded shadow">
+      <canvas id="statusChart" height="100"></canvas>
     </div>
-</div>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        let rowCount = 0;
-        const sheetBody = document.getElementById('sheet-body');
-        const addRowBtn = document.getElementById('add-row');
-        const downloadBtn = document.getElementById('download-excel');
-        let statusChart;
 
-        loadDataFromStorage();
-        initChart();
-        updateStats();
-        updateChart();
+    <!-- Footer -->
+    <footer class="mt-10 text-center text-sm text-gray-500">
+      Created by - Toshit Kumar (ICT360 process trainer)
+    </footer>
+  </div>
 
-        addRowBtn.addEventListener('click', () => {
-            addNewRow();
-            saveDataToStorage();
-        });
+  <!-- SCRIPT -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const tbody = document.getElementById("sheet-body");
+      const addRowBtn = document.getElementById("add-row");
+      const exportBtn = document.getElementById("export-excel");
 
-        downloadBtn.addEventListener('click', downloadExcel);
+      let data = JSON.parse(localStorage.getItem("problemData")) || [];
 
-        function addNewRow(data = {}) {
-            rowCount++;
-            const today = new Date().toISOString().split('T')[0];
+      function saveData() {
+        localStorage.setItem("problemData", JSON.stringify(data));
+      }
 
-            const newRow = document.createElement('tr');
-            newRow.className = 'table-row';
-            newRow.dataset.id = rowCount;
+      function updateChart() {
+        const statusCount = { Open: 0, "In Progress": 0, Closed: 0 };
+        data.forEach(row => statusCount[row.status]++);
 
-            newRow.innerHTML = `
-                <td class="table-cell px-4 py-2">${rowCount}</td>
-                <td class="table-cell px-4 py-2"><input type="date" value="${data.date || today}"></td>
-                <td class="table-cell px-4 py-2"><input type="text" value="${data.problem || ''}" placeholder="Enter problem description"></td>
-                <td class="table-cell px-4 py-2"><textarea rows="1" placeholder="Enter solution">${data.solution || ''}</textarea></td>
-                <td class="table-cell px-4 py-2">
-                    <select>
-                        <option value="open" ${data.status === "open" ? "selected" : ""}>Open</option>
-                        <option value="pending" ${data.status === "pending" ? "selected" : ""}>Pending</option>
-                        <option value="completed" ${data.status === "completed" ? "selected" : ""}>Completed</option>
-                    </select>
-                </td>
-                <td class="table-cell px-4 py-2"><input type="text" value="${data.remarks || ''}" placeholder="Enter remarks"></td>
-                <td class="table-cell px-4 py-2">
-                    <button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-sm">Delete</button>
-                </td>
-            `;
+        const chartData = {
+          labels: Object.keys(statusCount),
+          datasets: [{
+            data: Object.values(statusCount),
+            backgroundColor: ["#f87171", "#facc15", "#4ade80"]
+          }]
+        };
 
-            sheetBody.appendChild(newRow);
-
-            newRow.querySelector('.delete-btn').addEventListener('click', function () {
-                sheetBody.removeChild(newRow);
-                saveDataToStorage();
-                updateStats();
-                updateChart();
-            });
-
-            const inputs = newRow.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => {
-                input.addEventListener('change', () => {
-                    saveDataToStorage();
-                    updateStats();
-                    updateChart();
-                });
-            });
-
-            updateStats();
-            updateChart();
-        }
-
-        function updateStats() {
-            const total = document.querySelectorAll('#sheet-body tr').length;
-            const completed = document.querySelectorAll('select option[value="completed"]:checked').length;
-            const pending = total - completed;
-
-            document.getElementById('total-problems').textContent = total;
-            document.getElementById('completed-count').textContent = completed;
-            document.getElementById('pending-count').textContent = pending;
-        }
-
-        function initChart() {
-            const ctx = document.getElementById('statusChart').getContext('2d');
-            statusChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Open', 'Pending', 'Completed'],
-                    datasets: [{
-                        data: [0, 0, 0],
-                        backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-        }
-
-        function updateChart() {
-            const open = document.querySelectorAll('select option[value="open"]:checked').length;
-            const pending = document.querySelectorAll('select option[value="pending"]:checked').length;
-            const completed = document.querySelectorAll('select option[value="completed"]:checked').length;
-
-            statusChart.data.datasets[0].data = [open, pending, completed];
-            statusChart.update();
-        }
-
-        function saveDataToStorage() {
-            const data = [];
-            document.querySelectorAll('#sheet-body tr').forEach(row => {
-                const inputs = row.querySelectorAll('input, textarea, select');
-                data.push({
-                    date: inputs[0].value,
-                    problem: inputs[1].value,
-                    solution: inputs[2].value,
-                    status: inputs[3].value,
-                    remarks: inputs[4].value
-                });
-            });
-            localStorage.setItem('problemSheetData', JSON.stringify(data));
-        }
-
-        function loadDataFromStorage() {
-            const saved = localStorage.getItem('problemSheetData');
-            if (saved) {
-                const rows = JSON.parse(saved);
-                rows.forEach(row => addNewRow(row));
-            } else {
-                addNewRow();
+        const config = {
+          type: "doughnut",
+          data: chartData,
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: "top"
+              }
             }
+          }
+        };
+
+        if (window.statusChart) {
+          window.statusChart.destroy();
         }
 
-        function downloadExcel() {
-            const wb = XLSX.utils.book_new();
-            const wsData = [['Sr. No', 'Date', 'Problem', 'Solution', 'Status', 'Remarks']];
-            document.querySelectorAll('#sheet-body tr').forEach((row, i) => {
-                const inputs = row.querySelectorAll('input, textarea, select');
-                wsData.push([
-                    i + 1,
-                    inputs[0].value,
-                    inputs[1].value,
-                    inputs[2].value,
-                    inputs[3].value,
-                    inputs[4].value
-                ]);
+        const ctx = document.getElementById("statusChart").getContext("2d");
+        window.statusChart = new Chart(ctx, config);
+      }
+
+      function renderTable() {
+        tbody.innerHTML = "";
+        data.forEach((row, index) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="border px-4 py-2"><input type="text" value="${row.name}" class="w-full px-2 py-1 border rounded" /></td>
+            <td class="border px-4 py-2"><input type="text" value="${row.problem}" class="w-full px-2 py-1 border rounded" /></td>
+            <td class="border px-4 py-2">
+              <select class="status w-full px-2 py-1 border rounded">
+                <option ${row.status === "Open" ? "selected" : ""}>Open</option>
+                <option ${row.status === "In Progress" ? "selected" : ""}>In Progress</option>
+                <option ${row.status === "Closed" ? "selected" : ""}>Closed</option>
+              </select>
+            </td>
+            <td class="border px-4 py-2 text-center">
+              <button class="delete bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Delete</button>
+            </td>
+          `;
+
+          // Change listeners
+          tr.querySelectorAll("input, select").forEach((el, i) => {
+            el.addEventListener("input", () => {
+              const newRow = {
+                name: tr.querySelector("input:nth-child(1)").value,
+                problem: tr.querySelector("input:nth-child(2)").value,
+                status: tr.querySelector("select").value
+              };
+              data[index] = newRow;
+              saveData();
+              updateChart();
             });
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            XLSX.utils.book_append_sheet(wb, ws, 'Problems');
-            XLSX.writeFile(wb, 'Problem_Tracking_Sheet.xlsx');
-        }
+          });
+
+          // Delete
+          tr.querySelector(".delete").addEventListener("click", () => {
+            data.splice(index, 1);
+            saveData();
+            renderTable();
+            updateChart();
+          });
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      addRowBtn.addEventListener("click", () => {
+        data.push({ name: "", problem: "", status: "Open" });
+        saveData();
+        renderTable();
+        updateChart();
+      });
+
+      exportBtn.addEventListener("click", () => {
+        const sheet = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheet, "Problem Tracker");
+        XLSX.writeFile(wb, "Problem-Tracker.xlsx");
+      });
+
+      // First time load
+      renderTable();
+      updateChart();
     });
-</script>
+  </script>
 </body>
 </html>
