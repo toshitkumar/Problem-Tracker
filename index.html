@@ -1,246 +1,1594 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Problem Tracking Sheet</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f4f8;
-        }
-        .sheet-container {
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .table-header {
-            background-color: #4f46e5;
-            color: white;
-            font-weight: 600;
-        }
-        .table-row:nth-child(even) {
-            background-color: #f8fafc;
-        }
-        .table-row:nth-child(odd) {
-            background-color: #ffffff;
-        }
-        .table-cell {
-            border: 1px solid #e2e8f0;
-        }
-        .status-completed {
-            background-color: #dcfce7;
-            color: #166534;
-        }
-        .status-pending {
-            background-color: #fef3c7;
-            color: #92400e;
-        }
-        .status-open {
-            background-color: #dbeafe;
-            color: #1e40af;
-        }
-        input, select, textarea {
-            border: none;
-            width: 100%;
-            height: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            background: transparent;
-        }
-        input:focus, select:focus, textarea:focus {
-            outline: 2px solid #4f46e5;
-        }
-        .dashboard {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-</head>
-<body>
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6">Problem Tracking Sheet</h1>
-        
-        <!-- Dashboard Summary -->
-        <div class="dashboard p-6 mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="text-center">
-                <h3 class="text-lg font-semibold text-gray-600">Total Problems</h3>
-                <p id="total-problems" class="text-4xl font-bold text-indigo-600">0</p>
-            </div>
-            <div class="text-center">
-                <h3 class="text-lg font-semibold text-gray-600">Completed</h3>
-                <p id="completed-count" class="text-4xl font-bold text-green-600">0</p>
-            </div>
-            <div class="text-center">
-                <h3 class="text-lg font-semibold text-gray-600">Pending/Open</h3>
-                <p id="pending-count" class="text-4xl font-bold text-amber-600">0</p>
-            </div>
-        </div>
-        
-        <!-- Chart -->
-        <div class="dashboard p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">Status Distribution</h2>
-            <div class="h-64">
-                <canvas id="statusChart"></canvas>
-            </div>
-        </div>
-        
-        <!-- Excel Sheet -->
-        <div class="sheet-container bg-white mb-8">
-            <div class="overflow-x-auto">
-                <table class="w-full table-auto">
-                    <thead>
-                        <tr class="table-header">
-                            <th class="table-cell px-4 py-3 text-left">Sr. No</th>
-                            <th class="table-cell px-4 py-3 text-left">Date</th>
-                            <th class="table-cell px-4 py-3 text-left">Problem</th>
-                            <th class="table-cell px-4 py-3 text-left">Solution</th>
-                            <th class="table-cell px-4 py-3 text-left">Status</th>
-                            <th class="table-cell px-4 py-3 text-left">Remarks</th>
-                            <th class="table-cell px-4 py-3 text-left">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sheet-body">
-                        <!-- Rows will be added here -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="p-4 bg-gray-50 border-t border-gray-200">
-                <button id="add-row" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded">
-                    Add New Row
-                </button>
-            </div>
-        </div>
-    </div>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ICT360 Trainer Task Portal</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    html {
+      height: 100%;
+    }
+    
+    .status-indicator {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .trainer-card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .trainer-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    }
+    
+    .sidebar-item {
+      transition: background-color 0.2s, padding-left 0.2s;
+    }
+    
+    .sidebar-item:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+      padding-left: 1.5rem;
+    }
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            let rowCount = 0;
-            const sheetBody = document.getElementById('sheet-body');
-            const addRowBtn = document.getElementById('add-row');
-            let statusChart;
+    .task-entry {
+      transition: all 0.3s ease;
+    }
+
+    .task-entry.removing {
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="bg-gray-50">
+  <div class="flex h-full"><!-- Sidebar -->
+   <aside class="w-64 bg-white shadow-lg flex flex-col">
+    <div class="p-6 border-b border-gray-200">
+     <div class="flex items-center space-x-3">
+      <svg class="w-10 h-10 text-blue-600" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-9h2v2h-2v-2zm0 4h2v2h-2v-2z" />
+      </svg><span class="text-xl font-bold text-gray-800">ICT360</span>
+     </div>
+    </div>
+    <nav class="flex-1 p-4">
+     <ul class="space-y-2">
+      <li><a href="#" id="home-nav" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg bg-blue-50 text-blue-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        </svg><span id="menu-home" class="font-medium">Home</span> </a></li>
+      <li><a href="#" id="update-task-nav" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg><span id="menu-update" class="font-medium">Update Task</span> </a></li>
+      <li><a href="#" id="admin-nav" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg><span id="menu-admin" class="font-medium">Admin View</span> </a></li>
+      <li><a href="#" id="logout-nav" class="sidebar-item flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg><span id="menu-logout" class="font-medium">Logout</span> </a></li>
+     </ul>
+    </nav>
+    <div class="p-4 border-t border-gray-200">
+     <div class="text-center text-sm text-gray-500">
+      <p>Trainers submit tasks via</p>
+      <p class="font-medium">"Update Task" form</p>
+     </div>
+    </div>
+   </aside><!-- Main Content -->
+   <main class="flex-1 overflow-auto"><!-- Dashboard View -->
+    <div id="dashboard-view"><!-- Header -->
+     <header class="bg-white shadow-sm border-b border-gray-200">
+      <div class="px-8 py-6">
+       <h1 id="portal-title" class="text-3xl font-bold text-gray-800">Trainer Daily Task Dashboard</h1>
+       <p class="text-gray-600 mt-1">Real-time trainer status and task monitoring</p>
+      </div>
+     </header><!-- Dashboard Content -->
+     <div class="p-8"><!-- Statistics Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+       <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+         </div>
+         <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Total Trainers</p>
+          <p id="total-trainers" class="text-2xl font-bold text-gray-900">0</p>
+         </div>
+        </div>
+       </div>
+       <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+         </div>
+         <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Free Trainers</p>
+          <p id="free-trainers" class="text-2xl font-bold text-green-600">0</p>
+         </div>
+        </div>
+       </div>
+       <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+         </div>
+         <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">Occupied</p>
+          <p id="occupied-trainers" class="text-2xl font-bold text-red-600">0</p>
+         </div>
+        </div>
+       </div>
+       <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+        <div class="flex items-center">
+         <div class="flex-shrink-0">
+          <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+         </div>
+         <div class="ml-4">
+          <p class="text-sm font-medium text-gray-600">On Break</p>
+          <p id="break-trainers" class="text-2xl font-bold text-yellow-600">0</p>
+         </div>
+        </div>
+       </div>
+      </div><!-- Chart Section -->
+      <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+       <h3 class="text-lg font-semibold text-gray-800 mb-4">Trainer Status Overview</h3>
+       <div class="relative">
+        <canvas id="statusChart" width="400" height="200"></canvas>
+       </div>
+      </div>
+      <div class="mb-6 flex items-center justify-between">
+       <h2 class="text-xl font-semibold text-gray-800">Trainer Task Overview</h2>
+       <div class="flex items-center space-x-2 text-sm text-gray-600">
+        <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg><span>Auto-refreshing</span>
+       </div>
+      </div>
+      <div id="trainers-list" class="space-y-4"><!-- Trainer list will be inserted here -->
+      </div>
+      <div id="empty-state" class="text-center py-16 hidden">
+       <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+       </svg>
+       <h3 class="text-xl font-semibold text-gray-600 mb-2">No Tasks Submitted Yet</h3>
+       <p class="text-gray-500">Tasks will appear here once trainers submit them</p>
+      </div>
+     </div><!-- Footer -->
+     <footer class="bg-white border-t border-gray-200 mt-auto">
+      <div class="px-8 py-4 text-center text-gray-600">
+       <p id="footer-text">Created by - Toshit Kumar (ICT360 Process Trainer)</p>
+      </div>
+     </footer>
+    </div><!-- Update Task View -->
+    <div id="update-task-view" class="hidden min-h-full">
+     <div class="min-h-full bg-gradient-to-br from-blue-50 via-white to-gray-50 relative overflow-hidden"><!-- Background Pattern -->
+      <div class="absolute inset-0 opacity-5">
+       <svg class="w-full h-full" viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+         <pattern id="grid" width="10" height="10" patternunits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#0066CC" stroke-width="0.5" />
+         </pattern>
+        </defs> <rect width="100" height="100" fill="url(#grid)" />
+       </svg>
+      </div><!-- Geometric Shapes -->
+      <div class="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full opacity-20 blur-xl"></div>
+      <div class="absolute bottom-20 right-10 w-40 h-40 bg-gradient-to-br from-indigo-200 to-indigo-300 rounded-full opacity-20 blur-xl"></div>
+      <div class="absolute top-1/2 left-1/4 w-24 h-24 bg-gradient-to-br from-cyan-200 to-cyan-300 rounded-lg opacity-20 blur-lg transform rotate-45"></div>
+      <div class="relative z-10 min-h-full flex flex-col"><!-- Header -->
+       <div class="text-center py-8">
+        <div class="flex justify-center mb-4">
+         <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-2xl shadow-lg">
+          <svg class="w-12 h-12 text-white" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-9h2v2h-2v-2zm0 4h2v2h-2v-2z" />
+          </svg>
+         </div>
+        </div>
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">ICT360</h1>
+        <p class="text-xl text-gray-600 font-medium">Trainer Task Update Portal</p>
+       </div><!-- Form Container -->
+       <div class="flex-1 flex items-center justify-center px-4 pb-8">
+        <div class="w-full max-w-4xl">
+         <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8">
+          <div class="text-center mb-8">
+           <h2 class="text-3xl font-bold text-gray-800 mb-2">Update Your Daily Tasks</h2>
+           <p class="text-gray-600">Keep your status current and organized</p>
+          </div>
+          <form id="update-task-form" class="space-y-6"><!-- Trainer Name -->
+           <div class="space-y-2"><label for="update-trainer-name" class="flex items-center text-sm font-semibold text-gray-700">
+             <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+             </svg> Trainer Name </label> <input type="text" id="update-trainer-name" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md" placeholder="Enter your full name">
+           </div><!-- Date -->
+           <div class="space-y-2"><label for="update-date" class="flex items-center text-sm font-semibold text-gray-700">
+             <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+             </svg> Date </label> <input type="date" id="update-date" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md">
+           </div><!-- Task Entries Container -->
+           <div id="task-entries-container" class="space-y-6"><!-- Initial Task Entry -->
+            <div class="task-entry bg-gray-50 rounded-2xl p-6 border-2 border-dashed border-gray-200">
+             <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+               <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+               </svg> Task #1</h3><button type="button" class="remove-task-btn hidden text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors">
+               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+               </svg></button>
+             </div>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><!-- School/Location -->
+              <div class="space-y-2"><label class="flex items-center text-sm font-semibold text-gray-700">
+                <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /> <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg> Work Location </label> <input type="text" class="task-location w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" placeholder="e.g., Office, Client Site, Remote" required>
+              </div><!-- Task Status -->
+              <div class="space-y-2"><label class="flex items-center text-sm font-semibold text-gray-700">
+                <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg> Task Status </label> <select class="task-status w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" required> <option value="">Select status</option> <option value="free">🟢 Free</option> <option value="occupied">🔴 Occupied</option> <option value="break">🟡 On Break</option> </select>
+              </div><!-- Start Time -->
+              <div class="space-y-2"><label class="flex items-center text-sm font-semibold text-gray-700">
+                <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg> Start Time </label> <input type="time" class="task-start-time w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" required>
+              </div><!-- End Time -->
+              <div class="space-y-2"><label class="flex items-center text-sm font-semibold text-gray-700">
+                <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg> End Time </label> <input type="time" class="task-end-time w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" required>
+              </div>
+             </div><!-- Task Description -->
+             <div class="space-y-2 mt-4"><label class="flex items-center text-sm font-semibold text-gray-700">
+               <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+               </svg> Task Description </label> <textarea class="task-description w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none" rows="3" placeholder="Describe your task or training activity..." required></textarea>
+             </div>
+            </div>
+           </div><!-- Add More Task Button -->
+           <div class="text-center"><button type="button" id="add-more-task-btn" class="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl">
+             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+             </svg> Add More Task </button>
+           </div><!-- Submit Button -->
+           <div class="pt-6"><button type="submit" id="update-task-submit" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl focus:ring-4 focus:ring-blue-300 focus:outline-none">
+             <svg class="w-6 h-6 inline-block mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+             </svg> Submit All Tasks </button>
+           </div>
+          </form>
+         </div>
+        </div>
+       </div><!-- Footer -->
+       <footer class="text-center py-6">
+        <p class="text-gray-600 font-medium">Created by - Toshit Kumar (ICT360 Process Trainer)</p>
+       </footer>
+      </div>
+     </div>
+    </div><!-- Login View -->
+    <div id="login-view" class="hidden min-h-full">
+     <div class="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 relative overflow-hidden"><!-- Background Pattern -->
+      <div class="absolute inset-0 opacity-5">
+       <svg class="w-full h-full" viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+         <pattern id="login-grid" width="10" height="10" patternunits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#3b82f6" stroke-width="0.5" />
+         </pattern>
+        </defs> <rect width="100" height="100" fill="url(#login-grid)" />
+       </svg>
+      </div><!-- Geometric Shapes -->
+      <div class="absolute top-20 left-10 w-32 h-32 bg-gradient-to-br from-blue-200 to-blue-300 rounded-full opacity-20 blur-xl"></div>
+      <div class="absolute bottom-20 right-10 w-40 h-40 bg-gradient-to-br from-indigo-200 to-indigo-300 rounded-full opacity-20 blur-xl"></div>
+      <div class="relative z-10 min-h-full flex flex-col items-center justify-center px-4"><!-- Login Container -->
+       <div class="w-full max-w-md">
+        <div class="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-8"><!-- Header -->
+         <div class="text-center mb-8">
+          <div class="flex justify-center mb-4">
+           <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-2xl shadow-lg">
+            <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+           </div>
+          </div>
+          <h1 class="text-3xl font-bold text-gray-800 mb-2">Admin Login</h1>
+          <p class="text-gray-600">Enter your credentials to access admin panel</p>
+         </div><!-- Login Form -->
+         <form id="admin-login-form" class="space-y-6">
+          <div class="space-y-2"><label for="admin-username" class="flex items-center text-sm font-semibold text-gray-700">
+            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg> Username </label> <input type="text" id="admin-username" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md" placeholder="Enter your username">
+          </div>
+          <div class="space-y-2"><label for="admin-password" class="flex items-center text-sm font-semibold text-gray-700">
+            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg> Password </label> <input type="password" id="admin-password" required class="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md" placeholder="Enter your password">
+          </div>
+          <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+           Invalid username or password. Please try again.
+          </div><button type="submit" id="login-submit-btn" class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl focus:ring-4 focus:ring-blue-300 focus:outline-none">
+           <svg class="w-6 h-6 inline-block mr-2" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+           </svg> Login to Admin Panel </button>
+          <div class="text-center"><button type="button" id="back-to-home-btn" class="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"> ← Back to Home </button>
+          </div>
+         </form>
+        </div>
+       </div><!-- Footer -->
+       <footer class="mt-8 text-center">
+        <p class="text-gray-600 font-medium">Created by - Toshit Kumar (ICT360 Process Trainer)</p>
+       </footer>
+      </div>
+     </div>
+    </div><!-- Admin View -->
+    <div id="admin-view" class="hidden min-h-full">
+     <div class="min-h-full bg-gradient-to-br from-purple-50 via-white to-indigo-50 relative overflow-hidden"><!-- Background Pattern -->
+      <div class="absolute inset-0 opacity-5">
+       <svg class="w-full h-full" viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>
+         <pattern id="admin-grid" width="8" height="8" patternunits="userSpaceOnUse">
+          <path d="M 8 0 L 0 0 0 8" fill="none" stroke="#7c3aed" stroke-width="0.5" />
+         </pattern>
+        </defs> <rect width="100" height="100" fill="url(#admin-grid)" />
+       </svg>
+      </div><!-- Geometric Shapes -->
+      <div class="absolute top-20 right-10 w-32 h-32 bg-gradient-to-br from-purple-200 to-purple-300 rounded-full opacity-20 blur-xl"></div>
+      <div class="absolute bottom-20 left-10 w-40 h-40 bg-gradient-to-br from-indigo-200 to-indigo-300 rounded-full opacity-20 blur-xl"></div>
+      <div class="relative z-10 min-h-full flex flex-col"><!-- Header -->
+       <div class="bg-white/80 backdrop-blur-sm shadow-lg border-b border-white/20">
+        <div class="px-8 py-6">
+         <div class="flex items-center space-x-4">
+          <div class="bg-gradient-to-br from-purple-600 to-purple-700 p-3 rounded-xl shadow-lg">
+           <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+           </svg>
+          </div>
+          <div>
+           <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+           <p class="text-gray-600 mt-1">Review and manage trainer task submissions</p>
+          </div>
+         </div>
+        </div>
+       </div><!-- Admin Content -->
+       <div class="flex-1 p-8"><!-- Trainer Management Section -->
+        <div class="mb-8">
+         <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold text-gray-800">Trainer Management</h2><button id="add-trainer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center space-x-2">
+           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+           </svg><span>Add Trainer</span> </button>
+         </div>
+         <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+           <div class="bg-blue-50 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-blue-600" id="admin-total-trainers">0</p>
+            <p class="text-sm text-blue-700">Total Trainers</p>
+           </div>
+           <div class="bg-green-50 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-green-600" id="admin-free-trainers">0</p>
+            <p class="text-sm text-green-700">Free</p>
+           </div>
+           <div class="bg-red-50 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-red-600" id="admin-occupied-trainers">0</p>
+            <p class="text-sm text-red-700">Occupied</p>
+           </div>
+           <div class="bg-yellow-50 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-yellow-600" id="admin-break-trainers">0</p>
+            <p class="text-sm text-yellow-700">On Break</p>
+           </div>
+          </div>
+         </div>
+        </div>
+        <div class="mb-6 flex items-center justify-between">
+         <h2 class="text-xl font-semibold text-gray-800">Pending Task Reviews</h2>
+         <div class="flex items-center space-x-4">
+          <div class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium"><span id="pending-count">0</span> Pending
+          </div>
+          <div class="flex items-center space-x-2 text-sm text-gray-600">
+           <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+           </svg><span>Auto-refreshing</span>
+          </div>
+         </div>
+        </div>
+        <div id="admin-tasks-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6"><!-- Admin task cards will be inserted here -->
+        </div>
+        <div id="admin-empty-state" class="text-center py-16 hidden">
+         <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+         </svg>
+         <h3 class="text-xl font-semibold text-gray-600 mb-2">No Pending Tasks</h3>
+         <p class="text-gray-500">All tasks have been reviewed</p>
+        </div>
+       </div><!-- Footer -->
+       <footer class="bg-white/80 backdrop-blur-sm border-t border-white/20">
+        <div class="px-8 py-4 text-center text-gray-600">
+         <p>Created by - Toshit Kumar (ICT360 Process Trainer)</p>
+        </div>
+       </footer>
+      </div>
+     </div>
+    </div>
+   </main>
+  </div><!-- Add Trainer Modal -->
+  <div id="add-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+   <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Add New Trainer</h3>
+    <form id="add-trainer-form">
+     <div class="space-y-4">
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Trainer Name</label> <input type="text" id="trainer-name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Enter trainer name">
+      </div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Current Task</label> <input type="text" id="trainer-task" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Training at Aravali School">
+      </div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label> <select id="trainer-status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"> <option value="free">🟢 Free</option> <option value="occupied">🔴 Occupied</option> </select>
+      </div>
+     </div>
+     <div class="flex space-x-3 mt-6"><button type="button" id="cancel-btn" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button> <button type="submit" id="submit-btn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Add Trainer</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Edit Trainer Modal -->
+  <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+   <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Update Trainer Status</h3>
+    <form id="edit-trainer-form">
+     <div class="space-y-4">
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Trainer Name</label> <input type="text" id="edit-trainer-name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Current Task</label> <input type="text" id="edit-trainer-task" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+      <div><label class="block text-sm font-medium text-gray-700 mb-1">Status</label> <select id="edit-trainer-status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"> <option value="free">🟢 Free</option> <option value="occupied">🔴 Occupied</option> </select>
+      </div>
+     </div>
+     <div class="flex space-x-3 mt-6"><button type="button" id="delete-btn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Delete</button> <button type="button" id="edit-cancel-btn" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button> <button type="submit" id="edit-submit-btn" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Update</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Admin Review Modal -->
+  <div id="admin-review-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+   <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
+    <div class="flex items-center space-x-3 mb-6">
+     <div class="bg-gradient-to-br from-purple-600 to-purple-700 p-3 rounded-xl">
+      <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+     </div>
+     <h3 class="text-2xl font-bold text-gray-800">Review Task Submission</h3>
+    </div>
+    <div id="review-task-details" class="bg-gray-50 rounded-xl p-6 mb-6"><!-- Task details will be populated here -->
+    </div>
+    <form id="admin-review-form">
+     <div class="space-y-4">
+      <div><label class="block text-sm font-semibold text-gray-700 mb-2">Admin Comments</label> <textarea id="admin-comments" rows="4" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none" placeholder="Add your review comments here..."></textarea>
+      </div>
+     </div>
+     <div class="flex space-x-3 mt-8"><button type="button" id="admin-cancel-btn" class="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium">Cancel</button> <button type="button" id="reject-task-btn" class="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium">Reject Task</button> <button type="button" id="approve-task-btn" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-medium">Approve Task</button>
+     </div>
+    </form>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      portal_title: "Trainer Daily Task Dashboard",
+      menu_home: "Home",
+      menu_update: "Update Task",
+      menu_admin: "Admin View",
+      menu_logout: "Logout",
+      footer_text: "Created by - Toshit Kumar (ICT360 Process Trainer)",
+      background_color: "#f9fafb",
+      card_color: "#ffffff",
+      text_color: "#1f2937",
+      primary_button_color: "#2563eb",
+      secondary_button_color: "#6b7280",
+      font_family: "Inter",
+      font_size: 16
+    };
+
+    let trainers = [];
+    let editingTrainer = null;
+    let reviewingTask = null;
+    let taskCounter = 1;
+
+    const dataHandler = {
+      onDataChanged(data) {
+        trainers = data;
+        renderTrainers();
+        renderAdminTasks();
+      }
+    };
+
+    async function onConfigChange(config) {
+      const portalTitle = document.getElementById('portal-title');
+      const menuHome = document.getElementById('menu-home');
+      const menuUpdate = document.getElementById('menu-update');
+      const menuAdmin = document.getElementById('menu-admin');
+      const menuLogout = document.getElementById('menu-logout');
+      const footerText = document.getElementById('footer-text');
+
+      if (portalTitle) portalTitle.textContent = config.portal_title || defaultConfig.portal_title;
+      if (menuHome) menuHome.textContent = config.menu_home || defaultConfig.menu_home;
+      if (menuUpdate) menuUpdate.textContent = config.menu_update || defaultConfig.menu_update;
+      if (menuAdmin) menuAdmin.textContent = config.menu_admin || defaultConfig.menu_admin;
+      if (menuLogout) menuLogout.textContent = config.menu_logout || defaultConfig.menu_logout;
+      if (footerText) footerText.textContent = config.footer_text || defaultConfig.footer_text;
+
+      const backgroundColor = config.background_color || defaultConfig.background_color;
+      const cardColor = config.card_color || defaultConfig.card_color;
+      const textColor = config.text_color || defaultConfig.text_color;
+      const primaryButtonColor = config.primary_button_color || defaultConfig.primary_button_color;
+      const secondaryButtonColor = config.secondary_button_color || defaultConfig.secondary_button_color;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseSize = config.font_size || defaultConfig.font_size;
+
+      document.body.style.backgroundColor = backgroundColor;
+      document.body.style.color = textColor;
+      document.body.style.fontFamily = `${customFont}, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+      document.body.style.fontSize = `${baseSize}px`;
+
+      if (portalTitle) {
+        portalTitle.style.color = textColor;
+        portalTitle.style.fontSize = `${baseSize * 1.875}px`;
+      }
+
+      const cards = document.querySelectorAll('.trainer-card');
+      cards.forEach(card => {
+        card.style.backgroundColor = cardColor;
+      });
+
+      const primaryButtons = document.querySelectorAll('#add-trainer-btn, #submit-btn, #edit-submit-btn');
+      primaryButtons.forEach(btn => {
+        btn.style.backgroundColor = primaryButtonColor;
+      });
+
+      const secondaryButtons = document.querySelectorAll('#cancel-btn, #edit-cancel-btn');
+      secondaryButtons.forEach(btn => {
+        btn.style.color = secondaryButtonColor;
+        btn.style.borderColor = secondaryButtonColor;
+      });
+    }
+
+    function renderTrainers() {
+      const list = document.getElementById('trainers-list');
+      const emptyState = document.getElementById('empty-state');
+      
+      // Update statistics
+      updateStatistics();
+      
+      // Group tasks by trainer name
+      const trainerGroups = {};
+      trainers.forEach(task => {
+        if (!trainerGroups[task.name]) {
+          trainerGroups[task.name] = [];
+        }
+        trainerGroups[task.name].push(task);
+      });
+      
+      if (Object.keys(trainerGroups).length === 0) {
+        list.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      emptyState.classList.add('hidden');
+      list.innerHTML = Object.entries(trainerGroups).map(([trainerName, tasks]) => {
+        const approvedTasks = tasks.filter(t => t.approvalStatus === 'approved');
+        const pendingTasks = tasks.filter(t => t.approvalStatus === 'pending');
+        const rejectedTasks = tasks.filter(t => t.approvalStatus === 'rejected');
+        
+        return `
+          <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
+                  ${trainerName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 class="text-xl font-semibold text-gray-800">${trainerName}</h3>
+                  <p class="text-sm text-gray-600">${tasks.length} task(s) submitted</p>
+                </div>
+              </div>
+              <button class="view-all-tasks-btn bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors" data-trainer="${trainerName}">
+                View All Tasks
+              </button>
+            </div>
             
-            // Initialize chart
-            initChart();
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-green-50 rounded-lg p-3 text-center">
+                <p class="text-2xl font-bold text-green-600">${approvedTasks.length}</p>
+                <p class="text-sm text-green-700">Approved</p>
+              </div>
+              <div class="bg-yellow-50 rounded-lg p-3 text-center">
+                <p class="text-2xl font-bold text-yellow-600">${pendingTasks.length}</p>
+                <p class="text-sm text-yellow-700">Pending</p>
+              </div>
+              <div class="bg-red-50 rounded-lg p-3 text-center">
+                <p class="text-2xl font-bold text-red-600">${rejectedTasks.length}</p>
+                <p class="text-sm text-red-700">Rejected</p>
+              </div>
+            </div>
             
-            // Add initial row
-            addNewRow();
-            
-            // Add row button event
-            addRowBtn.addEventListener('click', addNewRow);
-            
-            function addNewRow() {
-                rowCount++;
-                const today = new Date().toISOString().split('T')[0];
+            <div id="tasks-${trainerName.replace(/\s+/g, '-')}" class="hidden space-y-3">
+              ${tasks.map(task => {
+                const statusBadge = getStatusBadge(task.approvalStatus);
+                const timeAgo = getTimeAgo(task.submittedAt);
                 
-                const newRow = document.createElement('tr');
-                newRow.className = 'table-row';
-                newRow.dataset.id = rowCount;
-                
-                newRow.innerHTML = `
-                    <td class="table-cell px-4 py-2">${rowCount}</td>
-                    <td class="table-cell px-4 py-2">
-                        <input type="date" value="${today}" class="date-input">
-                    </td>
-                    <td class="table-cell px-4 py-2">
-                        <input type="text" placeholder="Enter problem description" class="problem-input">
-                    </td>
-                    <td class="table-cell px-4 py-2">
-                        <textarea placeholder="Enter solution" class="solution-input" rows="1"></textarea>
-                    </td>
-                    <td class="table-cell px-4 py-2">
-                        <select class="status-select">
-                            <option value="open">Open</option>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                    </td>
-                    <td class="table-cell px-4 py-2">
-                        <input type="text" placeholder="Enter remarks" class="remarks-input">
-                    </td>
-                    <td class="table-cell px-4 py-2">
-                        <button class="delete-btn bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded text-sm">
-                            Delete
-                        </button>
-                    </td>
+                return `
+                  <div class="bg-gray-50 rounded-lg p-4 border-l-4 ${getBorderColor(task.approvalStatus)}">
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-2">
+                          <span class="text-sm font-medium text-gray-700">${task.workLocation || 'N/A'}</span>
+                          <span class="text-xs text-gray-500">•</span>
+                          <span class="text-xs text-gray-500">${timeAgo}</span>
+                        </div>
+                        <p class="text-sm text-gray-800 mb-2">${task.description || task.task}</p>
+                        <div class="flex items-center space-x-4 text-xs text-gray-600">
+                          <span>⏰ ${task.startTime || 'N/A'} - ${task.endTime || 'N/A'}</span>
+                          <span>📍 ${getStatusIcon(task.status)} ${getStatusText(task.status)}</span>
+                        </div>
+                        ${task.adminComments ? `<p class="text-xs text-gray-600 mt-2 italic">Admin: ${task.adminComments}</p>` : ''}
+                      </div>
+                      <div class="ml-4">
+                        ${statusBadge}
+                      </div>
+                    </div>
+                  </div>
                 `;
-                
-                sheetBody.appendChild(newRow);
-                
-                // Add event listener to delete button
-                newRow.querySelector('.delete-btn').addEventListener('click', function() {
-                    sheetBody.removeChild(newRow);
-                    updateStats();
-                    updateChart();
-                });
-                
-                // Add event listener to status select
-                newRow.querySelector('.status-select').addEventListener('change', function() {
-                    updateStats();
-                    updateChart();
-                });
-                
-                // Add event listeners to inputs for stats update
-                const inputs = newRow.querySelectorAll('input, textarea, select');
-                inputs.forEach(input => {
-                    input.addEventListener('change', function() {
-                        updateStats();
-                        updateChart();
-                    });
-                });
-                
-                updateStats();
-                updateChart();
-            }
-            
-            function updateStats() {
-                const totalProblems = document.querySelectorAll('#sheet-body tr').length;
-                document.getElementById('total-problems').textContent = totalProblems;
-                
-                const completedCount = document.querySelectorAll('#sheet-body .status-select option[value="completed"]:checked').length;
-                document.getElementById('completed-count').textContent = completedCount;
-                
-                const pendingCount = totalProblems - completedCount;
-                document.getElementById('pending-count').textContent = pendingCount;
-            }
-            
-            function initChart() {
-                const ctx = document.getElementById('statusChart').getContext('2d');
-                statusChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Open', 'Pending', 'Completed'],
-                        datasets: [{
-                            data: [0, 0, 0],
-                            backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
-                        }
-                    }
-                });
-            }
-            
-            function updateChart() {
-                const openCount = document.querySelectorAll('#sheet-body .status-select option[value="open"]:checked').length;
-                const pendingCount = document.querySelectorAll('#sheet-body .status-select option[value="pending"]:checked').length;
-                const completedCount = document.querySelectorAll('#sheet-body .status-select option[value="completed"]:checked').length;
-                
-                statusChart.data.datasets[0].data = [openCount, pendingCount, completedCount];
-                statusChart.update();
-            }
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Add event listeners for view all tasks buttons
+      const viewButtons = document.querySelectorAll('.view-all-tasks-btn');
+      viewButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const trainerName = btn.dataset.trainer;
+          const tasksContainer = document.getElementById(`tasks-${trainerName.replace(/\s+/g, '-')}`);
+          if (tasksContainer.classList.contains('hidden')) {
+            tasksContainer.classList.remove('hidden');
+            btn.textContent = 'Hide Tasks';
+          } else {
+            tasksContainer.classList.add('hidden');
+            btn.textContent = 'View All Tasks';
+          }
         });
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9665f26c6745a845',t:'MTc1MzcyMjE3Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+      });
+    }
+
+    function updateStatistics() {
+      const uniqueTrainers = [...new Set(trainers.map(t => t.name))];
+      const approvedTasks = trainers.filter(t => t.approvalStatus === 'approved');
+      
+      // Get latest status for each trainer
+      const trainerStatuses = {};
+      approvedTasks.forEach(task => {
+        if (!trainerStatuses[task.name] || new Date(task.submittedAt) > new Date(trainerStatuses[task.name].submittedAt)) {
+          trainerStatuses[task.name] = task;
+        }
+      });
+      
+      const statusCounts = {
+        free: 0,
+        occupied: 0,
+        break: 0
+      };
+      
+      Object.values(trainerStatuses).forEach(task => {
+        if (statusCounts.hasOwnProperty(task.status)) {
+          statusCounts[task.status]++;
+        }
+      });
+      
+      document.getElementById('total-trainers').textContent = uniqueTrainers.length;
+      document.getElementById('free-trainers').textContent = statusCounts.free;
+      document.getElementById('occupied-trainers').textContent = statusCounts.occupied;
+      document.getElementById('break-trainers').textContent = statusCounts.break;
+      
+      // Update chart
+      updateChart(statusCounts);
+    }
+
+    function updateChart(statusCounts) {
+      const canvas = document.getElementById('statusChart');
+      const ctx = canvas.getContext('2d');
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      const total = statusCounts.free + statusCounts.occupied + statusCounts.break;
+      if (total === 0) return;
+      
+      const colors = {
+        free: '#10B981',
+        occupied: '#EF4444',
+        break: '#F59E0B'
+      };
+      
+      const labels = {
+        free: 'Free',
+        occupied: 'Occupied',
+        break: 'On Break'
+      };
+      
+      // Draw bar chart
+      const barWidth = 80;
+      const barSpacing = 40;
+      const maxHeight = 150;
+      const startX = 50;
+      const startY = canvas.height - 30;
+      
+      let x = startX;
+      Object.entries(statusCounts).forEach(([status, count]) => {
+        const barHeight = total > 0 ? (count / total) * maxHeight : 0;
+        
+        // Draw bar
+        ctx.fillStyle = colors[status];
+        ctx.fillRect(x, startY - barHeight, barWidth, barHeight);
+        
+        // Draw count text
+        ctx.fillStyle = '#374151';
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(count.toString(), x + barWidth / 2, startY - barHeight - 10);
+        
+        // Draw label
+        ctx.fillText(labels[status], x + barWidth / 2, startY + 20);
+        
+        x += barWidth + barSpacing;
+      });
+    }
+
+    function updateAdminStatistics() {
+      const uniqueTrainers = [...new Set(trainers.map(t => t.name))];
+      const approvedTasks = trainers.filter(t => t.approvalStatus === 'approved');
+      
+      // Get latest status for each trainer
+      const trainerStatuses = {};
+      approvedTasks.forEach(task => {
+        if (!trainerStatuses[task.name] || new Date(task.submittedAt) > new Date(trainerStatuses[task.name].submittedAt)) {
+          trainerStatuses[task.name] = task;
+        }
+      });
+      
+      const statusCounts = {
+        free: 0,
+        occupied: 0,
+        break: 0
+      };
+      
+      Object.values(trainerStatuses).forEach(task => {
+        if (statusCounts.hasOwnProperty(task.status)) {
+          statusCounts[task.status]++;
+        }
+      });
+      
+      document.getElementById('admin-total-trainers').textContent = uniqueTrainers.length;
+      document.getElementById('admin-free-trainers').textContent = statusCounts.free;
+      document.getElementById('admin-occupied-trainers').textContent = statusCounts.occupied;
+      document.getElementById('admin-break-trainers').textContent = statusCounts.break;
+    }
+
+    function getStatusBadge(approvalStatus) {
+      const badges = {
+        approved: '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">Approved</span>',
+        pending: '<span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">Pending</span>',
+        rejected: '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">Rejected</span>'
+      };
+      return badges[approvalStatus] || badges.pending;
+    }
+
+    function getBorderColor(approvalStatus) {
+      const colors = {
+        approved: 'border-green-500',
+        pending: 'border-yellow-500',
+        rejected: 'border-red-500'
+      };
+      return colors[approvalStatus] || colors.pending;
+    }
+
+    function getStatusIcon(status) {
+      const icons = {
+        free: '🟢',
+        occupied: '🔴',
+        break: '🟡'
+      };
+      return icons[status] || '⚪';
+    }
+
+    function getStatusText(status) {
+      const texts = {
+        free: 'Free',
+        occupied: 'Occupied',
+        break: 'On Break'
+      };
+      return texts[status] || 'Unknown';
+    }
+
+    function renderAdminTasks() {
+      const grid = document.getElementById('admin-tasks-grid');
+      const emptyState = document.getElementById('admin-empty-state');
+      const pendingCount = document.getElementById('pending-count');
+      
+      // Update admin statistics
+      updateAdminStatistics();
+      
+      // Filter only pending tasks for admin review
+      const pendingTasks = trainers.filter(trainer => trainer.approvalStatus === 'pending');
+      
+      pendingCount.textContent = pendingTasks.length;
+      
+      if (pendingTasks.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      
+      emptyState.classList.add('hidden');
+      grid.innerHTML = pendingTasks.map(task => {
+        const statusIcon = task.status === 'free' ? '🟢' : task.status === 'occupied' ? '🔴' : '🟡';
+        const statusText = task.status === 'free' ? 'Free' : task.status === 'occupied' ? 'Occupied' : 'On Break';
+        const statusColor = task.status === 'free' ? 'text-green-600' : task.status === 'occupied' ? 'text-red-600' : 'text-yellow-600';
+        const timeAgo = getTimeAgo(task.submittedAt);
+        
+        return `
+          <div class="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-200">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white text-lg font-bold">
+                  ${task.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">${task.name}</h3>
+                  <p class="text-sm text-gray-600">Submitted ${timeAgo}</p>
+                </div>
+              </div>
+              <span class="bg-yellow-100 text-yellow-800 text-xs px-3 py-1 rounded-full font-medium">Pending Review</span>
+            </div>
+            
+            <div class="space-y-3 mb-4">
+              <div class="flex items-center space-x-2">
+                <span class="status-indicator text-lg">${statusIcon}</span>
+                <span class="text-sm font-medium ${statusColor}">${statusText}</span>
+              </div>
+              <p class="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">${task.task}</p>
+            </div>
+            
+            <div class="flex space-x-3">
+              <button class="review-task-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors" data-task-id="${task.id}">
+                Review Task
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Add event listeners to review buttons
+      const reviewButtons = document.querySelectorAll('.review-task-btn');
+      reviewButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const taskId = btn.dataset.taskId;
+          const task = trainers.find(t => t.id === taskId);
+          if (task) {
+            openReviewModal(task);
+          }
+        });
+      });
+    }
+
+    function getTimeAgo(timestamp) {
+      const now = new Date();
+      const updated = new Date(timestamp);
+      const diffMs = now - updated;
+      const diffMins = Math.floor(diffMs / 60000);
+      
+      if (diffMins < 1) return 'just now';
+      if (diffMins === 1) return '1 minute ago';
+      if (diffMins < 60) return `${diffMins} minutes ago`;
+      
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours === 1) return '1 hour ago';
+      if (diffHours < 24) return `${diffHours} hours ago`;
+      
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return '1 day ago';
+      return `${diffDays} days ago`;
+    }
+
+    function openAddModal() {
+      document.getElementById('add-modal').classList.remove('hidden');
+      document.getElementById('trainer-name').value = '';
+      document.getElementById('trainer-task').value = '';
+      document.getElementById('trainer-status').value = 'free';
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+    }
+
+    function openEditModal(trainer) {
+      editingTrainer = trainer;
+      document.getElementById('edit-modal').classList.remove('hidden');
+      document.getElementById('edit-trainer-name').value = trainer.name;
+      document.getElementById('edit-trainer-task').value = trainer.task;
+      document.getElementById('edit-trainer-status').value = trainer.status;
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+      editingTrainer = null;
+    }
+
+    function openReviewModal(task) {
+      reviewingTask = task;
+      document.getElementById('admin-review-modal').classList.remove('hidden');
+      document.getElementById('admin-comments').value = '';
+      
+      // Populate task details
+      const detailsContainer = document.getElementById('review-task-details');
+      const statusIcon = task.status === 'free' ? '🟢' : task.status === 'occupied' ? '🔴' : '🟡';
+      const statusText = task.status === 'free' ? 'Free' : task.status === 'occupied' ? 'Occupied' : 'On Break';
+      
+      detailsContainer.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <h4 class="font-semibold text-gray-700 mb-1">Trainer Name</h4>
+            <p class="text-gray-600">${task.name}</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-700 mb-1">Status</h4>
+            <p class="text-gray-600">${statusIcon} ${statusText}</p>
+          </div>
+          <div class="md:col-span-2">
+            <h4 class="font-semibold text-gray-700 mb-1">Task Description</h4>
+            <p class="text-gray-600">${task.task}</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-gray-700 mb-1">Submitted</h4>
+            <p class="text-gray-600">${getTimeAgo(task.submittedAt)}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function closeReviewModal() {
+      document.getElementById('admin-review-modal').classList.add('hidden');
+      reviewingTask = null;
+    }
+
+    // Navigation functions
+    function showDashboardView() {
+      document.getElementById('dashboard-view').classList.remove('hidden');
+      document.getElementById('update-task-view').classList.add('hidden');
+      document.getElementById('admin-view').classList.add('hidden');
+      
+      // Update sidebar active states
+      updateSidebarActive('home-nav');
+    }
+
+    function showUpdateTaskView() {
+      document.getElementById('dashboard-view').classList.add('hidden');
+      document.getElementById('update-task-view').classList.remove('hidden');
+      document.getElementById('admin-view').classList.add('hidden');
+      
+      // Update sidebar active states
+      updateSidebarActive('update-task-nav');
+      
+      // Set current date as default
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('update-date').value = today;
+    }
+
+    function showAdminView() {
+      // Check if user is already logged in
+      const isLoggedIn = sessionStorage.getItem('adminLoggedIn') === 'true';
+      
+      if (isLoggedIn) {
+        document.getElementById('dashboard-view').classList.add('hidden');
+        document.getElementById('update-task-view').classList.add('hidden');
+        document.getElementById('admin-view').classList.remove('hidden');
+        document.getElementById('login-view').classList.add('hidden');
+        
+        // Update sidebar active states
+        updateSidebarActive('admin-nav');
+      } else {
+        // Show login screen
+        document.getElementById('dashboard-view').classList.add('hidden');
+        document.getElementById('update-task-view').classList.add('hidden');
+        document.getElementById('admin-view').classList.add('hidden');
+        document.getElementById('login-view').classList.remove('hidden');
+        
+        // Update sidebar active states
+        updateSidebarActive('admin-nav');
+      }
+    }
+
+    function updateSidebarActive(activeId) {
+      const navItems = ['home-nav', 'update-task-nav', 'admin-nav'];
+      navItems.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+          if (id === activeId) {
+            element.classList.add('bg-blue-50', 'text-blue-600');
+            element.classList.remove('text-gray-700');
+          } else {
+            element.classList.remove('bg-blue-50', 'text-blue-600');
+            element.classList.add('text-gray-700');
+          }
+        }
+      });
+    }
+
+    // Add more task functionality
+    function addMoreTask() {
+      taskCounter++;
+      const container = document.getElementById('task-entries-container');
+      const newTaskEntry = document.createElement('div');
+      newTaskEntry.className = 'task-entry bg-gray-50 rounded-2xl p-6 border-2 border-dashed border-gray-200';
+      
+      newTaskEntry.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            Task #${taskCounter}
+          </h3>
+          <button type="button" class="remove-task-btn text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="flex items-center text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Define Work
+            </label>
+            <input type="text" class="task-location w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" placeholder="Define your work activity" required>
+          </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Task Status
+            </label>
+            <select class="task-status w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" required>
+              <option value="">Select status</option>
+              <option value="free">🟢 Free</option>
+              <option value="occupied">🔴 Occupied</option>
+              <option value="break">🟡 On Break</option>
+            </select>
+          </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Start Time
+            </label>
+            <input type="time" class="task-start-time w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" required>
+          </div>
+
+          <div class="space-y-2">
+            <label class="flex items-center text-sm font-semibold text-gray-700">
+              <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              End Time
+            </label>
+            <input type="time" class="task-end-time w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" required>
+          </div>
+        </div>
+
+        <div class="space-y-2 mt-4">
+          <label class="flex items-center text-sm font-semibold text-gray-700">
+            <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Task Description
+          </label>
+          <textarea class="task-description w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none" rows="3" placeholder="Describe your task or training activity..." required></textarea>
+        </div>
+      `;
+      
+      container.appendChild(newTaskEntry);
+      
+      // Add remove functionality
+      const removeBtn = newTaskEntry.querySelector('.remove-task-btn');
+      removeBtn.addEventListener('click', () => {
+        newTaskEntry.classList.add('removing');
+        setTimeout(() => {
+          newTaskEntry.remove();
+          updateRemoveButtons();
+        }, 300);
+      });
+      
+      updateRemoveButtons();
+    }
+
+    function updateRemoveButtons() {
+      const taskEntries = document.querySelectorAll('.task-entry');
+      taskEntries.forEach((entry, index) => {
+        const removeBtn = entry.querySelector('.remove-task-btn');
+        if (taskEntries.length > 1) {
+          removeBtn.classList.remove('hidden');
+        } else {
+          removeBtn.classList.add('hidden');
+        }
+      });
+    }
+
+    // Event listeners
+    document.getElementById('admin-cancel-btn').addEventListener('click', closeReviewModal);
+    document.getElementById('cancel-btn').addEventListener('click', closeAddModal);
+    document.getElementById('edit-cancel-btn').addEventListener('click', closeEditModal);
+
+    // Navigation event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+      const homeNav = document.getElementById('home-nav');
+      const updateTaskNav = document.getElementById('update-task-nav');
+      const adminNav = document.getElementById('admin-nav');
+      const logoutNav = document.getElementById('logout-nav');
+      const addMoreTaskBtn = document.getElementById('add-more-task-btn');
+      const approveTaskBtn = document.getElementById('approve-task-btn');
+      const rejectTaskBtn = document.getElementById('reject-task-btn');
+      const backToHomeBtn = document.getElementById('back-to-home-btn');
+
+      if (homeNav) {
+        homeNav.addEventListener('click', (e) => {
+          e.preventDefault();
+          showDashboardView();
+        });
+      }
+
+      if (updateTaskNav) {
+        updateTaskNav.addEventListener('click', (e) => {
+          e.preventDefault();
+          showUpdateTaskView();
+        });
+      }
+
+      if (adminNav) {
+        adminNav.addEventListener('click', (e) => {
+          e.preventDefault();
+          showAdminView();
+        });
+      }
+
+      if (logoutNav) {
+        logoutNav.addEventListener('click', (e) => {
+          e.preventDefault();
+          sessionStorage.removeItem('adminLoggedIn');
+          showDashboardView();
+          showNotification('Logged out successfully!', 'success');
+        });
+      }
+
+      if (backToHomeBtn) {
+        backToHomeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          showDashboardView();
+        });
+      }
+
+      if (addMoreTaskBtn) {
+        addMoreTaskBtn.addEventListener('click', addMoreTask);
+      }
+
+      // Add trainer button event listener
+      const addTrainerBtn = document.getElementById('add-trainer-btn');
+      if (addTrainerBtn) {
+        addTrainerBtn.addEventListener('click', openAddModal);
+      }
+
+      if (approveTaskBtn) {
+        approveTaskBtn.addEventListener('click', async () => {
+          if (!reviewingTask) return;
+          
+          approveTaskBtn.disabled = true;
+          approveTaskBtn.textContent = 'Approving...';
+          
+          const comments = document.getElementById('admin-comments').value;
+          const updatedTask = {
+            ...reviewingTask,
+            approvalStatus: 'approved',
+            adminComments: comments,
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: 'Admin'
+          };
+          
+          const result = await window.dataSdk.update(updatedTask);
+          
+          approveTaskBtn.disabled = false;
+          approveTaskBtn.textContent = 'Approve Task';
+          
+          if (result.isOk) {
+            showNotification('Task approved successfully!', 'success');
+            closeReviewModal();
+          } else {
+            showNotification('Failed to approve task. Please try again.', 'error');
+          }
+        });
+      }
+
+      if (rejectTaskBtn) {
+        rejectTaskBtn.addEventListener('click', async () => {
+          if (!reviewingTask) return;
+          
+          rejectTaskBtn.disabled = true;
+          rejectTaskBtn.textContent = 'Rejecting...';
+          
+          const comments = document.getElementById('admin-comments').value;
+          const updatedTask = {
+            ...reviewingTask,
+            approvalStatus: 'rejected',
+            adminComments: comments,
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: 'Admin'
+          };
+          
+          const result = await window.dataSdk.update(updatedTask);
+          
+          rejectTaskBtn.disabled = false;
+          rejectTaskBtn.textContent = 'Reject Task';
+          
+          if (result.isOk) {
+            showNotification('Task rejected successfully!', 'success');
+            closeReviewModal();
+          } else {
+            showNotification('Failed to reject task. Please try again.', 'error');
+          }
+        });
+      }
+    });
+
+    // Login Form Submission
+    document.getElementById('admin-login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      const username = document.getElementById('admin-username').value;
+      const password = document.getElementById('admin-password').value;
+      const loginError = document.getElementById('login-error');
+      const submitBtn = document.getElementById('login-submit-btn');
+      
+      // Hide previous error
+      loginError.classList.add('hidden');
+      
+      // Show loading state
+      submitBtn.disabled = true;
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = `
+        <svg class="w-6 h-6 inline-block mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Logging in...
+      `;
+      
+      // Simulate login delay
+      setTimeout(() => {
+        // Check credentials
+        if (username === 'imran@ict360' && password === 'ict360@123') {
+          // Successful login
+          sessionStorage.setItem('adminLoggedIn', 'true');
+          
+          // Reset form
+          document.getElementById('admin-login-form').reset();
+          
+          // Show admin view
+          document.getElementById('login-view').classList.add('hidden');
+          document.getElementById('admin-view').classList.remove('hidden');
+          
+          showNotification('Login successful! Welcome to Admin Panel', 'success');
+        } else {
+          // Failed login
+          loginError.classList.remove('hidden');
+          
+          // Clear password field
+          document.getElementById('admin-password').value = '';
+        }
+        
+        // Reset button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }, 1000);
+    });
+
+    // Form submissions
+    document.getElementById('add-trainer-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+      
+      const name = document.getElementById('trainer-name').value;
+      const task = document.getElementById('trainer-task').value;
+      const status = document.getElementById('trainer-status').value;
+      
+      if (trainers.length >= 999) {
+        showNotification('Maximum limit of 999 trainers reached. Please delete some trainers first.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add Trainer';
+        return;
+      }
+      
+      const result = await window.dataSdk.create({
+        id: Date.now().toString(),
+        name: name,
+        task: task,
+        status: status,
+        lastUpdated: new Date().toISOString(),
+        approvalStatus: 'approved',
+        adminComments: '',
+        submittedAt: new Date().toISOString(),
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: 'System'
+      });
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add Trainer';
+      
+      if (result.isOk) {
+        closeAddModal();
+        showNotification('Trainer added successfully!', 'success');
+      } else {
+        showNotification('Failed to add trainer. Please try again.', 'error');
+      }
+    });
+
+    document.getElementById('edit-trainer-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('edit-submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+      
+      const name = document.getElementById('edit-trainer-name').value;
+      const task = document.getElementById('edit-trainer-task').value;
+      const status = document.getElementById('edit-trainer-status').value;
+      
+      const updatedTrainer = {
+        ...editingTrainer,
+        name: name,
+        task: task,
+        status: status,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      const result = await window.dataSdk.update(updatedTrainer);
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Update';
+      
+      if (result.isOk) {
+        closeEditModal();
+        showNotification('Trainer updated successfully!', 'success');
+      } else {
+        showNotification('Failed to update trainer. Please try again.', 'error');
+      }
+    });
+
+    document.getElementById('delete-btn').addEventListener('click', async () => {
+      const deleteBtn = document.getElementById('delete-btn');
+      
+      if (deleteBtn.textContent === 'Delete') {
+        deleteBtn.textContent = 'Confirm Delete?';
+        deleteBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+        deleteBtn.classList.add('bg-red-700');
+        
+        setTimeout(() => {
+          if (deleteBtn.textContent === 'Confirm Delete?') {
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.classList.remove('bg-red-700');
+            deleteBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+          }
+        }, 3000);
+        return;
+      }
+      
+      deleteBtn.disabled = true;
+      deleteBtn.textContent = 'Deleting...';
+      
+      const result = await window.dataSdk.delete(editingTrainer);
+      
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.classList.remove('bg-red-700');
+      deleteBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+      
+      if (result.isOk) {
+        closeEditModal();
+        showNotification('Trainer deleted successfully!', 'success');
+      } else {
+        showNotification('Failed to delete trainer. Please try again.', 'error');
+      }
+    });
+
+    // Update Task Form Submission
+    document.getElementById('update-task-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('update-task-submit');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <svg class="w-6 h-6 inline-block mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Submitting Tasks...
+      `;
+      
+      const trainerName = document.getElementById('update-trainer-name').value;
+      const date = document.getElementById('update-date').value;
+      const taskEntries = document.querySelectorAll('.task-entry');
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const entry of taskEntries) {
+        const location = entry.querySelector('.task-location').value;
+        const status = entry.querySelector('.task-status').value;
+        const startTime = entry.querySelector('.task-start-time').value;
+        const endTime = entry.querySelector('.task-end-time').value;
+        const description = entry.querySelector('.task-description').value;
+        
+        if (trainers.length >= 999) {
+          showNotification('Maximum limit of 999 tasks reached. Please delete some tasks first.', 'error');
+          break;
+        }
+        
+        const taskText = `${description} at ${location} (${startTime} - ${endTime})`;
+        
+        const result = await window.dataSdk.create({
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: trainerName,
+          task: taskText,
+          status: status,
+          lastUpdated: new Date().toISOString(),
+          approvalStatus: 'pending',
+          adminComments: '',
+          submittedAt: new Date().toISOString(),
+          reviewedAt: '',
+          reviewedBy: '',
+          workLocation: location,
+          startTime: startTime,
+          endTime: endTime,
+          description: description
+        });
+        
+        if (result.isOk) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      }
+      
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+      
+      if (successCount > 0) {
+        showNotification(`${successCount} task(s) submitted successfully for review!`, 'success');
+        document.getElementById('update-task-form').reset();
+        
+        // Reset to single task entry
+        const container = document.getElementById('task-entries-container');
+        const taskEntries = container.querySelectorAll('.task-entry');
+        for (let i = 1; i < taskEntries.length; i++) {
+          taskEntries[i].remove();
+        }
+        taskCounter = 1;
+        updateRemoveButtons();
+        
+        setTimeout(() => {
+          showDashboardView();
+        }, 1500);
+      }
+      
+      if (errorCount > 0) {
+        showNotification(`${errorCount} task(s) failed to submit. Please try again.`, 'error');
+      }
+    });
+
+    function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg text-white font-medium transform transition-all duration-300 translate-x-full ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+      }`;
+      notification.textContent = message;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+      }, 100);
+      
+      setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 300);
+      }, 3000);
+    }
+
+    async function init() {
+      const initResult = await window.dataSdk.init(dataHandler);
+      if (!initResult.isOk) {
+        console.error('Failed to initialize data SDK');
+        return;
+      }
+
+      if (window.elementSdk) {
+        window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [
+              {
+                get: () => config.background_color || defaultConfig.background_color,
+                set: (value) => {
+                  window.elementSdk.config.background_color = value;
+                  window.elementSdk.setConfig({ background_color: value });
+                }
+              },
+              {
+                get: () => config.card_color || defaultConfig.card_color,
+                set: (value) => {
+                  window.elementSdk.config.card_color = value;
+                  window.elementSdk.setConfig({ card_color: value });
+                }
+              },
+              {
+                get: () => config.text_color || defaultConfig.text_color,
+                set: (value) => {
+                  window.elementSdk.config.text_color = value;
+                  window.elementSdk.setConfig({ text_color: value });
+                }
+              },
+              {
+                get: () => config.primary_button_color || defaultConfig.primary_button_color,
+                set: (value) => {
+                  window.elementSdk.config.primary_button_color = value;
+                  window.elementSdk.setConfig({ primary_button_color: value });
+                }
+              },
+              {
+                get: () => config.secondary_button_color || defaultConfig.secondary_button_color,
+                set: (value) => {
+                  window.elementSdk.config.secondary_button_color = value;
+                  window.elementSdk.setConfig({ secondary_button_color: value });
+                }
+              }
+            ],
+            borderables: [],
+            fontEditable: {
+              get: () => config.font_family || defaultConfig.font_family,
+              set: (value) => {
+                window.elementSdk.config.font_family = value;
+                window.elementSdk.setConfig({ font_family: value });
+              }
+            },
+            fontSizeable: {
+              get: () => config.font_size || defaultConfig.font_size,
+              set: (value) => {
+                window.elementSdk.config.font_size = value;
+                window.elementSdk.setConfig({ font_size: value });
+              }
+            }
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ["portal_title", config.portal_title || defaultConfig.portal_title],
+            ["menu_home", config.menu_home || defaultConfig.menu_home],
+            ["menu_update", config.menu_update || defaultConfig.menu_update],
+            ["menu_admin", config.menu_admin || defaultConfig.menu_admin],
+            ["menu_logout", config.menu_logout || defaultConfig.menu_logout],
+            ["footer_text", config.footer_text || defaultConfig.footer_text]
+          ])
+        });
+      }
+    }
+
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99b52c5101dab2d3',t:'MTc2MjYwNTk4NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
