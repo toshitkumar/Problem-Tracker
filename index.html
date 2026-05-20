@@ -1006,12 +1006,31 @@
         <span class="hero-tag">Add New Issue</span>
       </div>
       <h1 style="font-size:1.6rem">Report a New Issue</h1>
-      <p style="margin-top:6px">Fill in the details below. The issue will be added to the Issues tab and included in the PDF export.</p>
+      <p style="margin-top:6px">Fill in the details below. The issue will be added to the Issues tab, saved automatically, and included in the PDF export.</p>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:900px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;max-width:960px">
 
       <div style="display:flex;flex-direction:column;gap:1rem">
+
+        <!-- Row: Username -->
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Reported By (Username) *</label>
+          <input id="ni-user" class="form-input" type="text" placeholder="e.g. Toshit / Admin">
+        </div>
+
+        <!-- Row: Date + Time side by side -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Date *</label>
+            <input id="ni-date" class="form-input" type="date">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Time *</label>
+            <input id="ni-time" class="form-input" type="time">
+          </div>
+        </div>
+
         <div class="form-group" style="margin:0">
           <label class="form-label">Issue Title *</label>
           <input id="ni-title" class="form-input" type="text" placeholder="e.g. Session timeout not enforced">
@@ -1027,15 +1046,19 @@
         </div>
         <div class="form-group" style="margin:0">
           <label class="form-label">Issue Description *</label>
-          <textarea id="ni-desc" class="form-input" rows="4" style="resize:vertical" placeholder="Describe the problem in detail — what happens, how it can be reproduced..."></textarea>
+          <textarea id="ni-desc" class="form-input" rows="3" style="resize:vertical" placeholder="Describe the problem in detail..."></textarea>
         </div>
         <div class="form-group" style="margin:0">
           <label class="form-label">Recommended Fix *</label>
-          <textarea id="ni-fix" class="form-input" rows="4" style="resize:vertical" placeholder="What should the IT team do to fix this issue?"></textarea>
+          <textarea id="ni-fix" class="form-input" rows="3" style="resize:vertical" placeholder="What should the IT team do to fix this?"></textarea>
         </div>
         <div style="display:flex;gap:10px;padding-top:4px">
           <button class="login-btn" style="flex:1" onclick="addIssue()">＋ Add Issue to Report</button>
-          <button class="control-btn" onclick="downloadIssuesPDF()" style="white-space:nowrap">⬇ Download All as PDF</button>
+          <button class="control-btn" onclick="downloadIssuesPDF()" style="white-space:nowrap">⬇ Download PDF</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding-top:2px">
+          <span style="font-size:0.72rem;color:var(--text3)">💾 Issues auto-saved in browser</span>
+          <button class="control-btn" onclick="clearSavedIssues()" style="font-size:0.72rem;padding:4px 10px;color:var(--danger);border-color:rgba(239,68,68,0.3)">Clear All Saved</button>
         </div>
       </div>
 
@@ -1046,6 +1069,10 @@
           <div class="issue-header">
             <span class="issue-num" id="preview-num">ISSUE #00X</span>
             <span class="severity-badge medium" id="preview-severity">MEDIUM</span>
+          </div>
+          <div style="display:flex;gap:12px;margin-bottom:0.5rem;flex-wrap:wrap">
+            <span id="preview-user" style="font-size:0.72rem;color:var(--accent);display:flex;align-items:center;gap:4px">👤 Username</span>
+            <span id="preview-datetime" style="font-size:0.72rem;color:var(--text3);display:flex;align-items:center;gap:4px">🕐 Date & Time</span>
           </div>
           <div class="issue-title" id="preview-title" style="color:var(--text3);font-style:italic">Your issue title will appear here...</div>
           <div class="issue-desc" id="preview-desc">Description will appear here as you type.</div>
@@ -1401,13 +1428,18 @@
 
   // ── ISSUES STORE ──
   const defaultIssues = [
-    { id:'001', severity:'critical', title:'Curriculum Content Downloadable via IDM / Browser Extensions', desc:'All PDF and video content in the curriculum section can be downloaded using third-party browser extensions like Internet Download Manager (IDM). There is no server-side protection preventing direct file access.', fix:'Implement signed, expiring URLs for all media files. Serve files through an authenticated backend route rather than exposing direct CDN/storage URLs. Set proper Cache-Control headers. Disable public read access on cloud storage (S3/GCS bucket policy).' },
-    { id:'002', severity:'critical', title:'Video Download via Chrome Inspector Panel — Attribute Bypass', desc:'Video elements have a nodownload attribute which can be removed using Chrome DevTools, enabling direct download of all video content.', fix:'Never rely on frontend HTML attributes for security. Implement DRM, use HLS/DASH streaming with token-authenticated manifests, and ensure video source URLs are short-lived signed tokens that expire within minutes.' },
-    { id:'003', severity:'high',     title:'Missing Audit Logs on Admin Portal', desc:'The admin portal currently does not record user activity logs for teachers, students, or admins. Admin cannot monitor who did what, when, or for how long.', fix:'Implement a centralized audit logging system that records: User ID, Role, Action Type, Module, Timestamp, IP Address, and Duration. Build a filterable admin dashboard to view and export logs per user/role/date range.' },
-    { id:'004', severity:'medium',   title:'Complex Curriculum & Book Assignment Flow', desc:'The current UI for assigning curricula and books to students is overly complex, requiring multiple steps and navigation across several pages.', fix:'Redesign as a single-page wizard with bulk selection, drag-and-drop ordering, and a confirmation summary. Add a "Quick Assign" option for applying the same curriculum to multiple students at once.' },
+    { id:'001', severity:'critical', title:'Curriculum Content Downloadable via IDM / Browser Extensions', desc:'All PDF and video content in the curriculum section can be downloaded using third-party browser extensions like Internet Download Manager (IDM). There is no server-side protection preventing direct file access.', fix:'Implement signed, expiring URLs for all media files. Serve files through an authenticated backend route rather than exposing direct CDN/storage URLs. Set proper Cache-Control headers. Disable public read access on cloud storage (S3/GCS bucket policy).', user:'System', datetime:'20 May 2026, 09:00' },
+    { id:'002', severity:'critical', title:'Video Download via Chrome Inspector Panel — Attribute Bypass', desc:'Video elements have a nodownload attribute which can be removed using Chrome DevTools, enabling direct download of all video content.', fix:'Never rely on frontend HTML attributes for security. Implement DRM, use HLS/DASH streaming with token-authenticated manifests, and ensure video source URLs are short-lived signed tokens that expire within minutes.', user:'System', datetime:'20 May 2026, 09:00' },
+    { id:'003', severity:'high',     title:'Missing Audit Logs on Admin Portal', desc:'The admin portal currently does not record user activity logs for teachers, students, or admins. Admin cannot monitor who did what, when, or for how long.', fix:'Implement a centralized audit logging system that records: User ID, Role, Action Type, Module, Timestamp, IP Address, and Duration. Build a filterable admin dashboard to view and export logs per user/role/date range.', user:'System', datetime:'20 May 2026, 09:00' },
+    { id:'004', severity:'medium',   title:'Complex Curriculum & Book Assignment Flow', desc:'The current UI for assigning curricula and books to students is overly complex, requiring multiple steps and navigation across several pages.', fix:'Redesign as a single-page wizard with bulk selection, drag-and-drop ordering, and a confirmation summary. Add a "Quick Assign" option for applying the same curriculum to multiple students at once.', user:'System', datetime:'20 May 2026, 09:00' },
   ];
 
-  let extraIssues = [];
+  // Load from localStorage or start empty
+  let extraIssues = JSON.parse(localStorage.getItem('ict360_issues') || '[]');
+
+  function saveToStorage() {
+    localStorage.setItem('ict360_issues', JSON.stringify(extraIssues));
+  }
 
   function getSeverityColor(s) {
     return { critical:'#ef4444', high:'#f59e0b', medium:'#7c3aed', low:'#10b981' }[s] || '#64748b';
@@ -1417,41 +1449,61 @@
     return s.toUpperCase();
   }
 
+  // Set default date/time to now on page load
+  function setDefaultDateTime() {
+    const now = new Date();
+    const dateVal = now.toISOString().split('T')[0];
+    const timeVal = now.toTimeString().slice(0,5);
+    const di = document.getElementById('ni-date');
+    const ti = document.getElementById('ni-time');
+    if (di && !di.value) di.value = dateVal;
+    if (ti && !ti.value) ti.value = timeVal;
+  }
+
+  function formatDateTime(dateStr, timeStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr + 'T' + (timeStr || '00:00'));
+    return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })
+      + (timeStr ? ', ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true }) : '');
+  }
+
   // ── ADD ISSUE FORM ──
   function addIssue() {
+    const user     = document.getElementById('ni-user').value.trim();
+    const dateVal  = document.getElementById('ni-date').value;
+    const timeVal  = document.getElementById('ni-time').value;
     const title    = document.getElementById('ni-title').value.trim();
     const severity = document.getElementById('ni-severity').value;
     const desc     = document.getElementById('ni-desc').value.trim();
     const fix      = document.getElementById('ni-fix').value.trim();
 
-    if (!title || !desc || !fix) {
-      alert('Please fill in all fields.');
+    if (!user || !title || !desc || !fix || !dateVal) {
+      alert('Please fill in all required fields including Username and Date.');
       return;
     }
 
-    const num = String(defaultIssues.length + extraIssues.length + 1).padStart(3,'0');
-    extraIssues.push({ id: num, severity, title, desc, fix });
+    const num      = String(defaultIssues.length + extraIssues.length + 1).padStart(3,'0');
+    const datetime = formatDateTime(dateVal, timeVal);
+    extraIssues.push({ id: num, severity, title, desc, fix, user, datetime });
+    saveToStorage();
 
-    // Refresh issue cards
     renderExtraIssues();
 
-    // Update badge count
     const total = defaultIssues.length + extraIssues.length;
     document.querySelector('.badge').textContent = total + ' Issues Found';
 
-    // Clear form
+    // Clear form (keep username, reset rest)
     document.getElementById('ni-title').value = '';
     document.getElementById('ni-desc').value  = '';
     document.getElementById('ni-fix').value   = '';
+    setDefaultDateTime();
 
-    // Switch to Issues tab so user can see the new card
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-issues').classList.add('active');
     document.querySelector('.nav-tab').classList.add('active');
 
-    // Show success toast
-    showToast('✓ Issue #' + num + ' added! Redirecting to Issues tab...');
+    showToast('✓ Issue #' + num + ' saved & added!');
   }
 
   function renderExtraIssues() {
@@ -1465,6 +1517,10 @@
           <span class="issue-num">ISSUE #${issue.id}</span>
           <span class="severity-badge ${issue.severity}">${getSeverityLabel(issue.severity)}</span>
         </div>
+        <div style="display:flex;gap:12px;margin-bottom:0.6rem;flex-wrap:wrap">
+          <span style="font-size:0.72rem;color:var(--accent);display:flex;align-items:center;gap:4px">👤 ${issue.user || '—'}</span>
+          <span style="font-size:0.72rem;color:var(--text3);display:flex;align-items:center;gap:4px">🕐 ${issue.datetime || '—'}</span>
+        </div>
         <div class="issue-title">${issue.title}</div>
         <div class="issue-desc">${issue.desc}</div>
         <div class="solution-block">
@@ -1473,6 +1529,18 @@
         </div>`;
       container.appendChild(card);
     });
+
+    // Update badge
+    const total = defaultIssues.length + extraIssues.length;
+    document.querySelector('.badge').textContent = total + ' Issues Found';
+  }
+
+  function clearSavedIssues() {
+    if (!confirm('Are you sure you want to delete all saved issues? This cannot be undone.')) return;
+    extraIssues = [];
+    saveToStorage();
+    renderExtraIssues();
+    showToast('All saved issues cleared.');
   }
 
   function showToast(msg) {
@@ -1492,9 +1560,13 @@
       const color = getSeverityColor(issue.severity);
       return `
       <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1rem;border-left:4px solid ${color};page-break-inside:avoid">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">
           <span style="font-family:monospace;font-size:0.72rem;color:#94a3b8">ISSUE #${issue.id}</span>
           <span style="background:${color}22;color:${color};font-size:0.68rem;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:0.07em">${getSeverityLabel(issue.severity)}</span>
+        </div>
+        <div style="display:flex;gap:16px;margin-bottom:0.5rem">
+          <span style="font-size:0.72rem;color:#7c3aed;font-weight:600">👤 ${issue.user || '—'}</span>
+          <span style="font-size:0.72rem;color:#64748b">🕐 ${issue.datetime || '—'}</span>
         </div>
         <div style="font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:0.5rem">${issue.title}</div>
         <div style="font-size:0.82rem;color:#475569;line-height:1.6;margin-bottom:0.75rem">${issue.desc}</div>
@@ -1572,7 +1644,7 @@
 
   // ── LIVE PREVIEW for Add Issue form ──
   function setupPreview() {
-    const fields = ['ni-title','ni-desc','ni-fix','ni-severity'];
+    const fields = ['ni-title','ni-desc','ni-fix','ni-severity','ni-user','ni-date','ni-time'];
     fields.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.addEventListener('input', updatePreview);
@@ -1584,23 +1656,32 @@
     const desc     = document.getElementById('ni-desc').value  || 'Description will appear here as you type.';
     const fix      = document.getElementById('ni-fix').value   || 'Fix details will appear here.';
     const severity = document.getElementById('ni-severity').value;
+    const user     = document.getElementById('ni-user').value  || 'Username';
+    const dateVal  = document.getElementById('ni-date').value;
+    const timeVal  = document.getElementById('ni-time').value;
     const num      = String(defaultIssues.length + extraIssues.length + 1).padStart(3,'0');
 
     const card = document.getElementById('preview-card');
-    card.className = 'issue-card ' + severity;
-    card.style.opacity = title !== 'Your issue title will appear here...' ? '1' : '0.5';
+    card.className   = 'issue-card ' + severity;
+    card.style.opacity = document.getElementById('ni-title').value ? '1' : '0.5';
 
     document.getElementById('preview-title').textContent    = title;
     document.getElementById('preview-desc').textContent     = desc;
     document.getElementById('preview-fix').textContent      = fix;
     document.getElementById('preview-num').textContent      = 'ISSUE #' + num;
+    document.getElementById('preview-user').textContent     = '👤 ' + user;
+    document.getElementById('preview-datetime').textContent = '🕐 ' + (dateVal ? formatDateTime(dateVal, timeVal) : 'Date & Time');
 
     const sb = document.getElementById('preview-severity');
     sb.textContent = getSeverityLabel(severity);
     sb.className   = 'severity-badge ' + severity;
   }
 
-  window.addEventListener('DOMContentLoaded', setupPreview);
+  window.addEventListener('DOMContentLoaded', () => {
+    setupPreview();
+    setDefaultDateTime();
+    renderExtraIssues(); // load saved issues on startup
+  });
 
   // Fade-in animation
   const style = document.createElement('style');
